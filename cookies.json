@@ -1,0 +1,48 @@
+[
+  {
+    "name": "XSRF-TOKEN",
+    "value": "eyJpdiI6IldZRlpWUmZYQURPWFh3bzBxcXRFWmc9PSIsInZhbHVlIjoicHJWRVFpM2lRTGMvZkFMbDIvVFhFYzltQmFwaUJTR0tLcWh4KzByekxFeDVyVm1SYzdsWEFCVDY2L25UdjMveSsxTGhDSG1ZMlZ3U01MeFNnOE5saWw4THB6RjFkYm9jODJQenlLT3FoUnZBenA0dFdmWnBCMHpFVWpna0lONlYiLCJtYWMiOiJkNDAyZDNlMTVjOWNhOGQwMWI1MGFkMWM2ZWExOGYzNjZmMzRmYTE5ZWNiNDJiYjA3MWUxZmM1OWU0MDExNmNiIiwidGFnIjoiIn0%3D",
+    "domain": "sympony.tif3.net",
+    "path": "/",
+    "expires": 1772095087.138165,
+    "size": 352,
+    "httpOnly": false,
+    "secure": false,
+    "session": false,
+    "sameSite": "Lax",
+    "priority": "Medium",
+    "sameParty": false,
+    "sourceScheme": "Secure"
+  },
+  {
+    "name": "cf_clearance",
+    "value": "GHrOHwhgWVD7qbN48XdVUWTyNMSxep7fS7GemI4.ieM-1772087470-1.2.1.1-_AScdMFUjOOgWKzR56SlRO_k0jeE0LsgMBxRs2f2NkweyvLlfyXzf0RwtAhGpGiDrUNeS.1Uop37ZLQR1q2hL.TFNGZKqiCHBl3aPoPXH5Uhq7s1G7ihzZob2epssLhmPVj9fukINlxLHDNADhNNeaoOid5CxdDo3kaT6FWwR0r0SPo2Q.nR4O_M2J1C19hdnyD9kbGFLcOTRLVtwzvaBI5qDV1LckNZ510Di4mtrgQ",
+    "domain": ".tif3.net",
+    "path": "/",
+    "expires": 1803623470.132442,
+    "size": 310,
+    "httpOnly": true,
+    "secure": true,
+    "session": false,
+    "sameSite": "None",
+    "priority": "Medium",
+    "sameParty": false,
+    "sourceScheme": "Secure",
+    "partitionKey": "https://tif3.net"
+  },
+  {
+    "name": "sympony-session",
+    "value": "eyJpdiI6IjBHS3hYcUIyR1VGWlJ3Z2dkVGdzUkE9PSIsInZhbHVlIjoiN0IyVENJRk04RjFTNnhUa0JBcEhrM01zeHFuMHNxV0dOcFFydXY0MitFWHdDcmw2VEZyODEvbTRvTzRvVVd0TWdBWGdIYzhaZFc0MFdmQ3ZPa2xJL1QyUnRvV21QdjlGbXlmQ0ZoQVpVTUNsVWtnaEVtUFhMR09UNjRqWWNqNU0iLCJtYWMiOiI0N2JkMTQxZmI5ZDYzNmQwN2JhNDg2NDI3Y2FlZDc2NDVhMDljZGI2NmNiNjIxMjkwNjdjOTQ5MzkwMzcyZWUxIiwidGFnIjoiIn0%3D",
+    "domain": "sympony.tif3.net",
+    "path": "/",
+    "expires": 1772095087.138306,
+    "size": 357,
+    "httpOnly": true,
+    "secure": false,
+    "session": false,
+    "sameSite": "Lax",
+    "priority": "Medium",
+    "sameParty": false,
+    "sourceScheme": "Secure"
+  }
+]
