@@ -74,18 +74,28 @@ console.log('ENV TEST:', process.env.WEB_USERNAME);
   // ===============================
 
   async function capture_png(link, selector, namepng) {
-    // kembali ke halaman target setelah login
-    await page.goto(link, {
-      waitUntil: 'networkidle2',
+    await page.goto(link, { waitUntil: 'networkidle2' });
+
+    // === FORCE LIGHT MODE SCRIPT ===
+    await page.evaluate(() => {
+      // 1. Hapus class 'dark' jika ada di html atau body
+      document.documentElement.classList.remove('dark', 'dark-mode');
+      document.body.classList.remove('dark', 'dark-mode');
+
+      // 2. Jika website menggunakan LocalStorage untuk simpan tema
+      localStorage.setItem('theme', 'light');
+      localStorage.setItem('color-scheme', 'light');
+
+      // Tambahan: Kadang butuh reload kecil atau trigger event jika UI tidak berubah
+      window.dispatchEvent(new Event('storage'));
     });
+    // ===============================
+
     await page.waitForSelector(selector, { timeout: 60000 });
-    await page.waitForSelector(selector);
     const tableElement = await page.$(selector);
     if (tableElement) {
       await tableElement.screenshot({ path: namepng });
-      console.log(`${namepng} Table berhasil dicapture`);
-    } else {
-      console.log('Table tidak ditemukan!');
+      console.log(`${namepng} Table berhasil dicapture (Light Mode)`);
     }
   }
 
