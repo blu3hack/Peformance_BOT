@@ -2,6 +2,7 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const db = require('./connection');
 const fs = require('fs');
+const { spawn } = require('child_process');
 const token = process.env.BOT_TOKEN;
 const bot = new TelegramBot(token, { polling: true });
 
@@ -48,6 +49,25 @@ bot.on('message', async (msg) => {
 
   if (!allowed_username.includes(username)) {
     return bot.sendMessage(msg.chat.id, `Mohon Maaf <b>Bapak/Ibu</b>\nBOT ini tidak untuk menerima pesan.\nTerima Kasih.`, { parse_mode: 'HTML' });
+  }
+
+  if (text === 'capture') {
+    bot.sendMessage(msg.chat.id, '⏳ Sedang mengambil screenshot, mohon tunggu...');
+    // Menjalankan 'node capture.js'
+    const prosesCapture = spawn('node', ['capture.js']);
+    prosesCapture.stdout.on('data', (data) => {
+      console.log(`Stdout: ${data}`);
+    });
+    prosesCapture.stderr.on('data', (data) => {
+      console.error(`Stderr: ${data}`);
+    });
+    prosesCapture.on('close', (code) => {
+      if (code === 0) {
+        bot.sendMessage(msg.chat.id, '✅ Screenshot selesai diambil. Silakan ketik <b>send</b> untuk mengirim laporan.', { parse_mode: 'HTML' });
+      } else {
+        bot.sendMessage(msg.chat.id, `❌ Terjadi kesalahan saat menjalankan capture.js (Exit Code: ${code})`);
+      }
+    });
   }
 
   if (text === 'send') {
