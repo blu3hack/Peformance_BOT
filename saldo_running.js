@@ -1,4 +1,3 @@
-// loadfile.js
 const { spawn } = require('child_process');
 
 function runCommand(cmd, args = [], label = '', delay = 0) {
@@ -23,8 +22,18 @@ function runCommand(cmd, args = [], label = '', delay = 0) {
   });
 }
 
-async function main() {
+// Fungsi utama yang akan dijalankan setiap 3 jam
+async function executeTask() {
+  console.log(`\n[${new Date().toLocaleString()}] Dimulai: Siklus Pengecekan Saldo`);
+
   await runCommand('node', ['capture'], '\n========= Proses Capture =========', 20000);
   await runCommand('node', ['send'], '\n========= Proses Send =========');
+
+  console.log(`\n[${new Date().toLocaleString()}] Selesai: Menunggu 3 jam untuk siklus berikutnya...`);
 }
-main();
+
+// 1. Jalankan langsung saat script di-start
+executeTask();
+// 2. Pasang interval 3 jam
+const TIGA_JAM = 3 * 60 * 60 * 1000;
+setInterval(executeTask, TIGA_JAM);
