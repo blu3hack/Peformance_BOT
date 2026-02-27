@@ -27,7 +27,7 @@ async function executeTask() {
   console.log(`\n[${new Date().toLocaleString()}] Dimulai: Siklus Pengecekan Saldo`);
 
   await runCommand('node', ['capture'], '\n========= Proses Capture =========', 20000);
-  await runCommand('node', ['send'], '\n========= Proses Send =========');
+  await runCommand('node', ['trigger'], '\n========= Proses Send =========');
 
   console.log(`\n[${new Date().toLocaleString()}] Selesai: Menunggu 3 jam untuk siklus berikutnya...`);
 }
