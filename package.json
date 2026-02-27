@@ -14,8 +14,11 @@
     "axios": "^1.13.5",
     "dotenv": "^17.2.4",
     "form-data": "^4.0.5",
+    "input": "^1.0.1",
     "mysql2": "^3.18.1",
     "node-telegram-bot-api": "^0.67.0",
-    "puppeteer": "^24.37.5"
+    "puppeteer": "^24.37.5",
+    "telegraf": "^4.16.3",
+    "telegram": "^2.26.22"
   }
 }
