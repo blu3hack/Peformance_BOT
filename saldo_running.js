@@ -24,7 +24,7 @@ function runCommand(cmd, args = [], label = '', delay = 0) {
 }
 
 async function main() {
-  await runCommand('node', ['capture'], '\n========= Proses Capture =========', 5000);
-  await runCommand('node', ['send'], '\n========= Proses Send =========', 5000);
+  await runCommand('node', ['capture'], '\n========= Proses Capture =========', 20000);
+  await runCommand('node', ['send'], '\n========= Proses Send =========');
 }
 main();
