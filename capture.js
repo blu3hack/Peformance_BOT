@@ -1,94 +1,25 @@
 require('dotenv').config();
 const puppeteer = require('puppeteer');
-const fs = require('fs');
 
 (async () => {
   const USER_DATA_PATH = './user_session';
+  let browser;
 
-  const browser = await puppeteer.launch({
-    headless: false, // Ubah ke true jika sudah lancar
-    userDataDir: USER_DATA_PATH,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-blink-features=AutomationControlled',
-      '--start-maximized',
-      '--disable-features=IsolateOrigins,site-per-process', // Menjaga konsistensi sesi
-    ],
-    defaultViewport: null,
-  });
-
-  const page = await browser.newPage();
-
-  // Samarkan User Agent agar tidak mudah kena logout oleh Cloudflare/WAF
-  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-  await page.setViewport({
-    width: 1920,
-    height: 1080,
-    deviceScaleFactor: 2,
-  });
-
-  async function capture_png(link, selector, namepng) {
-    try {
-      console.log(`\n🔍 Mengakses: ${link}...`);
-
-      // Gunakan 'load' alih-alih 'networkidle2' untuk stabilitas awal
-      await page.goto(link, { waitUntil: 'load', timeout: 90000 });
-
-      // Cek apakah ada input username (tanda sesi habis/halaman login)
-      const needsLogin = await page.$('#username');
-
-      if (needsLogin) {
-        console.log('⚠️ Sesi tidak ditemukan atau habis. Mencoba login otomatis...');
-        await page.waitForSelector('#username', { visible: true });
-
-        // Gunakan delay pengetikan agar menyerupai manusia
-        await page.type('#username', process.env.WEB_USERNAME, { delay: 100 });
-        await page.type('input[type="password"]', process.env.WEB_PASSWORD, { delay: 100 });
-
-        await Promise.all([page.click('button[type="submit"]'), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
-
-        console.log('✅ Login berhasil, kembali ke target...');
-        await page.goto(link, { waitUntil: 'networkidle2' });
-      }
-
-      // Injeksi CSS untuk Force Light Mode & Hapus Transmisi
-      await page.evaluate(() => {
-        const style = document.createElement('style');
-        style.innerHTML = `
-                    * { transition: none !important; animation: none !important; }
-                    .dark, .dark-mode, [data-theme='dark'] { 
-                        background-color: white !important; 
-                        color: black !important; 
-                    }
-                    /* Pastikan background body putih jika aplikasi pakai class dark */
-                    body.dark, body.dark-mode { background: white !important; color: black !important; }
-                `;
-        document.head.appendChild(style);
-        localStorage.setItem('theme', 'light');
-      });
-
-      // Tunggu sebentar agar chart/grafik render sempurna
-      await new Promise((r) => setTimeout(r, 3000));
-
-      await page.waitForSelector(selector, { timeout: 30000 });
-      const element = await page.$(selector);
-
-      if (element) {
-        await element.screenshot({ path: namepng });
-        console.log(`📸 Screenshot tersimpan: ${namepng}`);
-      } else {
-        console.log(`❌ Gagal: Selector ${selector} tidak ditemukan.`);
-      }
-    } catch (error) {
-      console.error(`⚠️ Error saat capture ${namepng}:`, error.message);
-    }
-  }
-
-  // --- EKSEKUSI ---
   try {
-    // Daftar target capture
+    browser = await puppeteer.launch({
+      headless: 'new', // Gunakan mode headless terbaru yang lebih stabil
+      userDataDir: USER_DATA_PATH,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized', '--disable-features=IsolateOrigins,site-per-process'],
+      defaultViewport: null,
+    });
+
+    const page = await browser.newPage();
+
+    // Agar tidak terdeteksi bot oleh Cloudflare
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+
+    await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
+
     const targets = [
       { url: 'https://sympony.tif3.net/capture-performance', sel: 'body > div:nth-child(1)', name: 'ASR-ENT.png' },
       { url: 'https://sympony.tif3.net/capture-performance', sel: 'body > div:nth-child(2)', name: 'ASR-WHF.png' },
@@ -99,10 +30,56 @@ const fs = require('fs');
     ];
 
     for (const target of targets) {
-      await capture_png(target.url, target.sel, target.name);
+      try {
+        console.log(`\nProcessing: ${target.name}...`);
+
+        // 1. Navigasi dengan timeout yang longgar
+        await page.goto(target.url, { waitUntil: 'load', timeout: 60000 });
+
+        // 2. Cek Login (Hanya jika elemen username muncul)
+        const loginCheck = await page.$('#username');
+        if (loginCheck) {
+          console.log(`🔑 Sesi habis di ${target.name}, mencoba login...`);
+          await page.type('#username', process.env.WEB_USERNAME);
+          await page.type('input[type="password"]', process.env.WEB_PASSWORD);
+          await Promise.all([page.click('button[type="submit"]'), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
+          // Kembali ke halaman target setelah login
+          await page.goto(target.url, { waitUntil: 'networkidle2' });
+        }
+
+        // 3. Force Light Mode & Stabilisasi Element
+        await page.evaluate(() => {
+          localStorage.setItem('theme', 'light');
+          const style = document.createElement('style');
+          style.innerHTML = `
+                        * { transition: none !important; animation: none !important; }
+                        body, .dark, [data-theme='dark'] { background: white !important; color: black !important; }
+                    `;
+          document.head.appendChild(style);
+        });
+
+        // 4. Tunggu selector stabil & visible
+        await page.waitForSelector(target.sel, { visible: true, timeout: 30000 });
+
+        // Jeda 2 detik untuk render chart/grafik
+        await new Promise((r) => setTimeout(r, 2000));
+
+        const element = await page.$(target.sel);
+        if (element) {
+          await element.screenshot({ path: target.name });
+          console.log(`✅ Berhasil capture: ${target.name}`);
+        }
+      } catch (err) {
+        console.error(`❌ Gagal pada ${target.name}: ${err.message}`);
+        // Lanjut ke target berikutnya, jangan matikan seluruh proses
+      }
     }
+  } catch (mainError) {
+    console.error('🔴 Fatal Error:', mainError.message);
   } finally {
-    console.log('\n🌟 Semua tugas selesai!');
-    await browser.close();
+    if (browser) {
+      console.log('\nClosing browser...');
+      await browser.close();
+    }
   }
 })();
