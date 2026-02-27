@@ -3,6 +3,7 @@
 
 # Node modules
 node_modules/
+user_session/
 
 # Log files
 npm-debug.log*
