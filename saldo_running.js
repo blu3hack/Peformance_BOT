@@ -3,7 +3,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const { spawn } = require('child_process');
 
 const token = process.env.BOT_TOKEN;
-const MY_CHAT_ID = 'ID_TELEGRAM_ANDA'; // Ganti dengan Chat ID Anda
+const MY_CHAT_ID = process.env.ALLOWED_CHAT_ID; // Ganti dengan Chat ID Anda
 const bot = new TelegramBot(token, { polling: true });
 
 /**
