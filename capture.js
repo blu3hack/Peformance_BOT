@@ -7,7 +7,7 @@ const puppeteer = require('puppeteer');
 
   try {
     browser = await puppeteer.launch({
-      headless: 'new', // Gunakan mode headless terbaru yang lebih stabil
+      headless: false, // Gunakan mode headless terbaru yang lebih stabil
       userDataDir: USER_DATA_PATH,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized', '--disable-features=IsolateOrigins,site-per-process'],
       defaultViewport: null,
