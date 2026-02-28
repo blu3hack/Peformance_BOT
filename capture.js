@@ -7,18 +7,11 @@ const puppeteer = require('puppeteer');
 
   try {
     browser = await puppeteer.launch({
-      headless: false, // Gunakan mode headless terbaru yang lebih stabil
+      headless: false,
       userDataDir: USER_DATA_PATH,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized', '--disable-features=IsolateOrigins,site-per-process'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized'],
       defaultViewport: null,
     });
-
-    const page = await browser.newPage();
-
-    // Agar tidak terdeteksi bot oleh Cloudflare
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-
-    await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
 
     const targets = [
       { url: 'https://sympony.tif3.net/capture-performance', sel: 'body > div:nth-child(1)', name: 'ASR-ENT.png' },
@@ -30,20 +23,26 @@ const puppeteer = require('puppeteer');
     ];
 
     for (const target of targets) {
+      let page; // Deklarasi variabel page di dalam loop
       try {
-        console.log(`\nProcessing: ${target.name}...`);
+        console.log(`\n--- Processing: ${target.name} ---`);
 
-        // 1. Navigasi dengan timeout yang longgar
-        await page.goto(target.url, { waitUntil: 'load', timeout: 60000 });
+        // Membuka tab baru untuk setiap target
+        page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+        await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
+
+        // 1. Navigasi
+        await page.goto(target.url, { waitUntil: 'networkidle2', timeout: 60000 });
 
         // 2. Cek Login (Hanya jika elemen username muncul)
         const loginCheck = await page.$('#username');
         if (loginCheck) {
-          console.log(`🔑 Sesi habis di ${target.name}, mencoba login...`);
+          console.log(`🔑 Sesi habis, mencoba login untuk ${target.name}...`);
           await page.type('#username', process.env.WEB_USERNAME);
           await page.type('input[type="password"]', process.env.WEB_PASSWORD);
           await Promise.all([page.click('button[type="submit"]'), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
-          // Kembali ke halaman target setelah login
+          // Kembali ke halaman target setelah login jika tidak auto-redirect
           await page.goto(target.url, { waitUntil: 'networkidle2' });
         }
 
@@ -52,16 +51,16 @@ const puppeteer = require('puppeteer');
           localStorage.setItem('theme', 'light');
           const style = document.createElement('style');
           style.innerHTML = `
-                        * { transition: none !important; animation: none !important; }
-                        body, .dark, [data-theme='dark'] { background: white !important; color: black !important; }
-                    `;
+            * { transition: none !important; animation: none !important; }
+            body, .dark, [data-theme='dark'] { background: white !important; color: black !important; }
+          `;
           document.head.appendChild(style);
         });
 
         // 4. Tunggu selector stabil & visible
         await page.waitForSelector(target.sel, { visible: true, timeout: 30000 });
 
-        // Jeda 2 detik untuk render chart/grafik
+        // Jeda untuk render chart/grafik
         await new Promise((r) => setTimeout(r, 2000));
 
         const element = await page.$(target.sel);
@@ -71,7 +70,11 @@ const puppeteer = require('puppeteer');
         }
       } catch (err) {
         console.error(`❌ Gagal pada ${target.name}: ${err.message}`);
-        // Lanjut ke target berikutnya, jangan matikan seluruh proses
+      } finally {
+        // PENTING: Tutup tab setelah selesai agar tidak menumpuk
+        if (page) {
+          await page.close();
+        }
       }
     }
   } catch (mainError) {
