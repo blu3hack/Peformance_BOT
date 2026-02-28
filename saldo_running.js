@@ -52,7 +52,7 @@ const taskTrigger = async () => {
 };
 
 // Konfigurasi Waktu
-const SETENGAH_JAM = 30 * 60 * 1000;
+const SETENGAH_JAM = 5 * 60 * 1000;
 const TIGA_JAM = 3 * 60 * 60 * 1000;
 
 // Jalankan
