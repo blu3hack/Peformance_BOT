@@ -2,7 +2,7 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const { spawn } = require('child_process');
 
-const token = process.env.BOT_TOKEN;
+const token = process.env.TRIGGER_BOT_TOKEN;
 const MY_CHAT_ID = process.env.ALLOWED_CHAT_ID; // Ganti dengan Chat ID Anda
 const bot = new TelegramBot(token, { polling: true });
 
