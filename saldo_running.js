@@ -82,9 +82,8 @@ const taskTrigger = async () => {
 };
 
 // Konfigurasi Waktu
-const LIMA_MENIT = 5 * 60 * 1000;
-// const TIGA_JAM = 3 * 60 * 60 * 1000;
-const TIGA_JAM = 10 * 60 * 1000;
+const LIMA_MENIT = 30 * 60 * 1000;
+const TIGA_JAM = 3 * 60 * 60 * 1000;
 
 // Jalankan Siklus
 startCycle('Capture', taskCapture, LIMA_MENIT);
