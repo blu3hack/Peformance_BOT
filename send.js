@@ -178,7 +178,8 @@ bot.on('message', async (msg) => {
 
   // --- FUNGSI HELPER (Letakkan di luar handler agar rapi) ---
   async function getPerformanceReport() {
-    const today = new Date().toISOString().split('T')[0];
+    // const today = new Date().toISOString().split('T')[0];
+    const today = '2026-02-28';
     const query = `SELECT
       rsb.lok AS lokasi,
       rsb.area,
