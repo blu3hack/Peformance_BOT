@@ -18,7 +18,7 @@ const ADMIN_ID = process.env.ALLOWED_CHAT_ID; // Ganti dengan ID Telegram Anda (
 
   try {
     browser = await puppeteer.launch({
-      headless: false,
+      headless: 'new',
       userDataDir: USER_DATA_PATH,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--start-maximized'],
       defaultViewport: null,
