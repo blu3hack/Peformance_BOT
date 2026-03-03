@@ -87,4 +87,4 @@ const TIGA_JAM = 3 * 60 * 60 * 1000;
 
 // Jalankan Siklus
 startCycle('Capture', taskCapture, LIMA_MENIT);
-startCycle('Trigger', taskTrigger, TIGA_JAM);
+// startCycle('Trigger', taskTrigger, TIGA_JAM);
