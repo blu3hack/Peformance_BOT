@@ -1,28 +1,16 @@
+// Pastikan file ini terpisah dari file koneksi database untuk menghindari circular dependency
 const db = require('./connection');
 
 async function getPerformanceReport() {
   const query = `
     WITH alert_gamas_network AS (
       SELECT
-        service_area,
-        a.sto,
-        branch,
+        a.service_area, a.sto, a.branch,
         CASE
-          WHEN a.region_tsel = 'BALI NUSRA' THEN
-            'BALNUS'
-          WHEN a.region_tsel = 'JATENG-DIY' THEN
-            'JATENG'
-          ELSE
-            a.region_tsel
+          WHEN a.region_tsel = 'BALI NUSRA' THEN 'BALNUS'
+          WHEN a.region_tsel = 'JATENG-DIY' THEN 'JATENG'
+          ELSE a.region_tsel
         END AS region_tsel,
-        CASE
-          WHEN a.region_tsel = 'BALI NUSRA' THEN
-            3
-          WHEN a.region_tsel = 'JATENG-DIY' THEN
-            1
-          ELSE
-            2
-        END AS region_urut,
         COUNT(DISTINCT rcv.incident) AS recovery_op,
         COUNT(DISTINCT CASE WHEN rcv.ttr >= 2 AND rcv.ttr < 3 THEN rcv.incident END) AS recovery_wr,
         COUNT(DISTINCT CASE WHEN rcv.ttr > 3 THEN rcv.incident END) AS recovery_ex,
@@ -32,58 +20,36 @@ async function getPerformanceReport() {
         COUNT(DISTINCT pro.incident) AS proactive
       FROM
         metabase.mapping_sektor a
-        LEFT JOIN metabase_tif3.view_network_recovery_ip_transport rcv ON rcv.sto = a.sto
-        AND rcv.jenis_tiket IN ('ip', 'transport')
-        LEFT JOIN metabase_tif3.view_network_repair_ip_transport rep ON rep.sto = a.sto
-        AND rep.jenis_tiket IN ('ip', 'transport')
-        LEFT JOIN metabase_tif3.view_proactive pro ON pro.sto = a.sto
-      GROUP BY
-        region_urut,
-        a.sto,
-        branch,
-        region_tsel,
-        service_area
-      ORDER BY
-        region_urut
+        LEFT JOIN metabase_tif3.view_network_recovery_ip_transport rcv 
+          ON rcv.sto = a.sto 
+          AND rcv.jenis_tiket COLLATE utf8mb4_unicode_ci IN ('ip', 'transport')
+        LEFT JOIN metabase_tif3.view_network_repair_ip_transport rep 
+          ON rep.sto = a.sto 
+          AND rep.jenis_tiket COLLATE utf8mb4_unicode_ci IN ('ip', 'transport')
+        LEFT JOIN metabase_tif3.view_proactive pro 
+          ON pro.sto = a.sto
+      GROUP BY 1, 2, 3, 4
     )
 
-    -- SELECT * FROM alert_gamas_network
-
     SELECT
-      region_tsel,
-      branch,
-      SUM(recovery_op) AS recovery_op,
-      SUM(recovery_wr) AS recovery_wr,
-      SUM(recovery_ex) AS recovery_ex,
-      SUM(repair_op) AS repair_op,
-      SUM(repair_wr) AS repair_wr,
-      SUM(repair_ex) AS repair_ex,
+      region_tsel, branch,
+      SUM(recovery_op) AS recovery_op, SUM(recovery_wr) AS recovery_wr,
+      SUM(recovery_ex) AS recovery_ex, SUM(repair_op) AS repair_op,
       SUM(proactive) AS proactive
-      
-    FROM
-      alert_gamas_network
-    GROUP BY branch
+    FROM alert_gamas_network
+    GROUP BY region_tsel, branch
 
     UNION ALL 
 
     SELECT
-      region_tsel,
-      'total',
-      SUM(recovery_op) AS recovery_op,
-      SUM(recovery_wr) AS recovery_wr,
-      SUM(recovery_ex) AS recovery_ex,
-      SUM(repair_op) AS repair_op,
-      SUM(repair_wr) AS repair_wr,
-      SUM(repair_ex) AS repair_ex,
+      region_tsel, 'total' AS branch,
+      SUM(recovery_op) AS recovery_op, SUM(recovery_wr) AS recovery_wr,
+      SUM(recovery_ex) AS recovery_ex, SUM(repair_op) AS repair_op,
       SUM(proactive) AS proactive
-      
-    FROM
-      alert_gamas_network
+    FROM alert_gamas_network
     GROUP BY region_tsel
-    ORDER BY
-    region_tsel,
-    CASE WHEN branch = 'total' THEN 2 ELSE 1 END
-
+    
+    ORDER BY region_tsel, CASE WHEN branch = 'total' THEN 2 ELSE 1 END
   `;
 
   return new Promise((resolve, reject) => {
@@ -99,116 +65,51 @@ async function getPerformanceReport() {
 
       const getShortName = (name) => (name ? name.substring(0, 3).toUpperCase() : 'N/A');
 
-      // TTR 3 JAM
-      // --- 1. CARI DATA TERBESAR UNTUK OPEN (3 JAM) ---
-      const topRegOpt3 = [...regionTotals].sort((a, b) => (b.tot_tiga_op || 0) - (a.tot_tiga_op || 0))[0];
-      const topBraOpt3 = branchDetails.filter((b) => b.region_nama === topRegOpt3.region_nama).sort((a, b) => (b.tot_tiga_op || 0) - (a.tot_tiga_op || 0))[0];
+      // Helper untuk mencari top data agar tidak repetitif
+      const getTop = (arr, key, filterFn = null) => {
+        let target = filterFn ? arr.filter(filterFn) : arr;
+        return [...target].sort((a, b) => (b[key] || 0) - (a[key] || 0))[0] || {};
+      };
 
-      // --- 2. CARI DATA TERBESAR UNTUK WARNING (3 JAM) ---
-      const topRegWrt3 = [...regionTotals].sort((a, b) => (b.tot_tiga_wr || 0) - (a.tot_tiga_wr || 0))[0];
-      const topBraWrt3 = branchDetails.filter((b) => b.region_nama === topRegWrt3.region_nama).sort((a, b) => (b.tot_tiga_wr || 0) - (a.tot_tiga_wr || 0))[0];
+      // ++++++++++++++ Recovery ++++++++++++++++++++++++++
+      const topRegRecop = getTop(regionTotals, 'recovery_op');
+      const topBraRecop = getTop(branchDetails, 'recovery_op', (b) => b.region_tsel === topRegRecop.region_tsel);
 
-      // --- 3. CARI DATA TERBESAR UNTUK EXPIRED (3 JAM) ---
-      const topRegExt3 = [...regionTotals].sort((a, b) => (b.tot_tiga_ex || 0) - (a.tot_tiga_ex || 0))[0];
-      const topBraExt3 = branchDetails.filter((b) => b.region_nama === topRegExt3.region_nama).sort((a, b) => (b.tot_tiga_ex || 0) - (a.tot_tiga_ex || 0))[0];
+      const topRegRecwr = getTop(regionTotals, 'recovery_wr');
+      const topBraRecwr = getTop(branchDetails, 'recovery_wr', (b) => b.region_tsel === topRegRecwr.region_tsel);
 
-      // TTR 3 MANJA
-      // --- 1. CARI DATA TERBESAR UNTUK OPEN (3 JAM MANJA) ---
-      const topRegOptm = [...regionTotals].sort((a, b) => (b.tot_tigam_op || 0) - (a.tot_tigam_op || 0))[0];
-      const topBraOptm = branchDetails.filter((b) => b.region_nama === topRegOptm.region_nama).sort((a, b) => (b.tot_tigam_op || 0) - (a.tot_tigam_op || 0))[0];
+      const topRegRecex = getTop(regionTotals, 'recovery_ex');
+      const topBraRecex = getTop(branchDetails, 'recovery_ex', (b) => b.region_tsel === topRegRecex.region_tsel);
 
-      // --- 2. CARI DATA TERBESAR UNTUK WARNING (3 JAM MANJA) ---
-      const topRegWrtm = [...regionTotals].sort((a, b) => (b.tot_tigam_wr || 0) - (a.tot_tigam_wr || 0))[0];
-      const topBraWrtm = branchDetails.filter((b) => b.region_nama === topRegWrtm.region_nama).sort((a, b) => (b.tot_tigam_wr || 0) - (a.tot_tigam_wr || 0))[0];
+      // ++++++++++++++ Repair ++++++++++++++++++++++++++
+      const topRegRepop = getTop(regionTotals, 'repair_op');
+      const topBraRepop = getTop(branchDetails, 'repair_op', (b) => b.region_tsel === topRegRepop.region_tsel);
 
-      // --- 3. CARI DATA TERBESAR UNTUK EXPIRED (3 JAM MANJA) ---
-      const topRegExtm = [...regionTotals].sort((a, b) => (b.tot_tigam_ex || 0) - (a.tot_tigam_ex || 0))[0];
-      const topBraExtm = branchDetails.filter((b) => b.region_nama === topRegExtm.region_nama).sort((a, b) => (b.tot_tigam_ex || 0) - (a.tot_tigam_ex || 0))[0];
+      const topRegRepwr = getTop(regionTotals, 'repair_wr');
+      const topBraRepwr = getTop(branchDetails, 'repair_wr', (b) => b.region_tsel === topRegRepwr.region_tsel);
 
-      // TTR 6 MANJA
-      // --- 1. CARI DATA TERBESAR UNTUK OPEN (3 JAM) ---
-      const topRegOpt6 = [...regionTotals].sort((a, b) => (b.tot_enam_op || 0) - (a.tot_enam_op || 0))[0];
-      const topBraOpt6 = branchDetails.filter((b) => b.region_nama === topRegOpt6.region_nama).sort((a, b) => (b.tot_enam_op || 0) - (a.tot_enam_op || 0))[0];
+      const topRegRepex = getTop(regionTotals, 'repair_ex');
+      const topBraRepex = getTop(branchDetails, 'repair_ex', (b) => b.region_tsel === topRegRepex.region_tsel);
 
-      // --- 2. CARI DATA TERBESAR UNTUK WARNING (3 JAM) ---
-      const topRegWrt6 = [...regionTotals].sort((a, b) => (b.tot_enam_wr || 0) - (a.tot_enam_wr || 0))[0];
-      const topBraWrt6 = branchDetails.filter((b) => b.region_nama === topRegWrt6.region_nama).sort((a, b) => (b.tot_enam_wr || 0) - (a.tot_enam_wr || 0))[0];
+      // +++++++++++++++ Proactive +++++++++++++++
+      const topRegPro = getTop(regionTotals, 'proactive');
+      const topBraPro = getTop(branchDetails, 'proactive', (b) => b.region_tsel === topRegPro.region_tsel);
 
-      // --- 3. CARI DATA TERBESAR UNTUK EXPIRED (3 JAM) ---
-      const topRegExt6 = [...regionTotals].sort((a, b) => (b.tot_enam_ex || 0) - (a.tot_enam_ex || 0))[0];
-      const topBraExt6 = branchDetails.filter((b) => b.region_nama === topRegExt6.region_nama).sort((a, b) => (b.tot_enam_ex || 0) - (a.tot_enam_ex || 0))[0];
+      // Gunakan Optional Chaining dan Default Value
+      const summaryString = `<b>Recovery</b>
+Open - ${topRegRecop.region_tsel || 'N/A'} (${topRegRecop.recovery_op || 0}) -> Dis ${getShortName(topBraRecop.branch)} (${topBraRecop.recovery_op || 0})
+Warn - ${topRegRecwr.region_tsel || 'N/A'} (${topRegRecwr.recovery_wr || 0}) -> Dis ${getShortName(topBraRecwr.branch)} (${topBraRecwr.recovery_wr || 0})
+Expi - ${topRegRecex.region_tsel || 'N/A'} (${topRegRecex.recovery_wr || 0}) -> Dis ${getShortName(topBraRecex.branch)} (${topBraRecex.recovery_wr || 0})
 
-      // TTR 12 MANJA
-      // --- 1. CARI DATA TERBESAR UNTUK OPEN (3 JAM) ---
-      const topRegOpt12 = [...regionTotals].sort((a, b) => (b.tot_duabelas_op || 0) - (a.tot_duabelas_op || 0))[0];
-      const topBraOpt12 = branchDetails.filter((b) => b.region_nama === topRegOpt12.region_nama).sort((a, b) => (b.tot_duabelas_op || 0) - (a.tot_duabelas_op || 0))[0];
+<b>Repair</b>
+Open - ${topRegRepop.region_tsel || 'N/A'} (${topRegRepop.repair_op || 0}) -> Dis ${getShortName(topBraRepop.branch)} (${topBraRepop.repair_op || 0})
+Warn - ${topRegRepwr.region_tsel || 'N/A'} (${topRegRepwr.repair_wr || 0}) -> Dis ${getShortName(topBraRepwr.branch)} (${topBraRepwr.repair_wr || 0})
+Expi - ${topRegRepex.region_tsel || 'N/A'} (${topRegRepex.repair_ex || 0}) -> Dis ${getShortName(topBraRepex.branch)} (${topBraRepex.repair_ex || 0})
 
-      // --- 2. CARI DATA TERBESAR UNTUK WARNING (3 JAM) ---
-      const topRegWrt12 = [...regionTotals].sort((a, b) => (b.tot_duabelas_wr || 0) - (a.tot_duabelas_wr || 0))[0];
-      const topBraWrt12 = branchDetails.filter((b) => b.region_nama === topRegWrt12.region_nama).sort((a, b) => (b.tot_duabelas_wr || 0) - (a.tot_duabelas_wr || 0))[0];
+<b>Proactive</b>
+All - ${topRegPro.region_tsel || 'N/A'} (${topRegPro.proactive || 0}) -> Dis ${getShortName(topBraPro.branch)} (${topBraPro.proactive || 0})
 
-      // --- 3. CARI DATA TERBESAR UNTUK EXPIRED (3 JAM) ---
-      const topRegExt12 = [...regionTotals].sort((a, b) => (b.tot_duabelas_ex || 0) - (a.tot_duabelas_ex || 0))[0];
-      const topBraExt12 = branchDetails.filter((b) => b.region_nama === topRegExt12.region_nama).sort((a, b) => (b.tot_duabelas_ex || 0) - (a.tot_duabelas_ex || 0))[0];
-
-      // TTR 24 MANJA
-      // --- 1. CARI DATA TERBESAR UNTUK OPEN (3 JAM) ---
-      const topRegOpt24 = [...regionTotals].sort((a, b) => (b.tot_duaempat_op || 0) - (a.tot_duaempat_op || 0))[0];
-      const topBraOpt24 = branchDetails.filter((b) => b.region_nama === topRegOpt24.region_nama).sort((a, b) => (b.tot_duaempat_op || 0) - (a.tot_duaempat_op || 0))[0];
-
-      // --- 2. CARI DATA TERBESAR UNTUK WARNING (3 JAM) ---
-      const topRegWrt24 = [...regionTotals].sort((a, b) => (b.tot_duaempat_wr || 0) - (a.tot_duaempat_wr || 0))[0];
-      const topBraWrt24 = branchDetails.filter((b) => b.region_nama === topRegWrt24.region_nama).sort((a, b) => (b.tot_duaempat_wr || 0) - (a.tot_duaempat_wr || 0))[0];
-
-      // --- 3. CARI DATA TERBESAR UNTUK EXPIRED (3 JAM) ---
-      const topRegExt24 = [...regionTotals].sort((a, b) => (b.tot_duaempat_ex || 0) - (a.tot_duaempat_ex || 0))[0];
-      const topBraExt24 = branchDetails.filter((b) => b.region_nama === topRegExt24.region_nama).sort((a, b) => (b.tot_duaempat_ex || 0) - (a.tot_duaempat_ex || 0))[0];
-
-      // TTR 36 MANJA
-      // --- 1. CARI DATA TERBESAR UNTUK OPEN (3 JAM) ---
-      const topRegOpt36 = [...regionTotals].sort((a, b) => (b.tot_tigapuluh_op || 0) - (a.tot_tigapuluh_op || 0))[0];
-      const topBraOpt36 = branchDetails.filter((b) => b.region_nama === topRegOpt36.region_nama).sort((a, b) => (b.tot_tigapuluh_op || 0) - (a.tot_tigapuluh_op || 0))[0];
-
-      // --- 2. CARI DATA TERBESAR UNTUK WARNING (3 JAM) ---
-      const topRegWrt36 = [...regionTotals].sort((a, b) => (b.tot_tigapuluh_wr || 0) - (a.tot_tigapuluh_wr || 0))[0];
-      const topBraWrt36 = branchDetails.filter((b) => b.region_nama === topRegWrt36.region_nama).sort((a, b) => (b.tot_tigapuluh_wr || 0) - (a.tot_tigapuluh_wr || 0))[0];
-
-      // --- 3. CARI DATA TERBESAR UNTUK EXPIRED (3 JAM) ---
-      const topRegExt36 = [...regionTotals].sort((a, b) => (b.tot_tigapuluh_ex || 0) - (a.tot_tigapuluh_ex || 0))[0];
-      const topBraExt36 = branchDetails.filter((b) => b.region_nama === topRegExt36.region_nama).sort((a, b) => (b.tot_tigapuluh_ex || 0) - (a.tot_tigapuluh_ex || 0))[0];
-
-      // --- FORMAT SUMMARY ---
-      // Menggunakan pemisahan per kategori agar terlihat siapa yang paling kritis di tiap status
-      const summaryString = `TTRC 3H (D,V)
-Open- ${topRegOpt3.region_nama} (${topRegOpt3.tot_tiga_op})-> Dis ${getShortName(topBraOpt3.branch)} (${topBraOpt3.tot_tiga_op})
-Warn- ${topRegWrt3.region_nama} (${topRegWrt3.tot_tiga_wr})-> Dis ${getShortName(topBraWrt3.branch)} (${topBraWrt3.tot_tiga_wr})
-Expi- ${topRegExt3.region_nama} (${topRegExt3.tot_tiga_ex})-> Dis ${getShortName(topBraExt3.branch)} (${topBraExt3.tot_tiga_ex})
-
-TTRC 3H (Manja)
-Open- ${topRegOptm.region_nama} (${topRegOptm.tot_tigam_op})-> Dis ${getShortName(topBraOptm.branch)} (${topBraOptm.tot_tigam_op})
-Warn- ${topRegWrtm.region_nama} (${topRegWrtm.tot_tigam_wr})-> Dis ${getShortName(topBraWrtm.branch)} (${topBraWrtm.tot_tigam_wr})
-Expi- ${topRegExtm.region_nama} (${topRegExtm.tot_tigam_ex})-> Dis ${getShortName(topBraExtm.branch)} (${topBraExtm.tot_tigam_ex})
-
-TTRC 6H (Platinum)
-Open- ${topRegOpt6.region_nama} (${topRegOpt6.tot_enam_op})-> Dis ${getShortName(topBraOpt6.branch)} (${topBraOpt6.tot_enam_op})
-Warn- ${topRegWrt6.region_nama} (${topRegWrt6.tot_enam_wr})-> Dis ${getShortName(topBraWrt6.branch)} (${topBraWrt6.tot_enam_wr})
-Expi- ${topRegExt6.region_nama} (${topRegExt6.tot_enam_ex})-> Dis ${getShortName(topBraExt6.branch)} (${topBraExt6.tot_enam_ex})
-
-TTRC 12H (Gold)
-Open- ${topRegOpt12.region_nama} (${topRegOpt12.tot_duabelas_op})-> Dis ${getShortName(topBraOpt12.branch)} (${topBraOpt12.tot_duabelas_op})
-Warn- ${topRegWrt12.region_nama} (${topRegWrt12.tot_duabelas_wr})-> Dis ${getShortName(topBraWrt12.branch)} (${topBraWrt12.tot_duabelas_wr})
-Expi- ${topRegExt12.region_nama} (${topRegExt12.tot_duabelas_ex})-> Dis ${getShortName(topBraExt12.branch)} (${topBraExt12.tot_duabelas_ex})
-
-TTRC 24H (Reguler)
-Open- ${topRegOpt24.region_nama} (${topRegOpt24.tot_duaempat_op})-> Dis ${getShortName(topBraOpt24.branch)} (${topBraOpt24.tot_duaempat_op})
-Warn- ${topRegWrt24.region_nama} (${topRegWrt24.tot_duaempat_wr})-> Dis ${getShortName(topBraWrt24.branch)} (${topBraWrt24.tot_duaempat_wr})
-Expi- ${topRegExt24.region_nama} (${topRegExt24.tot_duaempat_ex})-> Dis ${getShortName(topBraExt24.branch)} (${topBraExt24.tot_duaempat_ex})
-
-TTRC 36H (Non HVC)
-Open- ${topRegOpt36.region_nama} (${topRegOpt36.tot_tigapuluh_op})-> Dis ${getShortName(topBraOpt36.branch)} (${topBraOpt36.tot_tigapuluh_op})
-Warn- ${topRegWrt36.region_nama} (${topRegWrt36.tot_tigapuluh_wr})-> Dis ${getShortName(topBraWrt36.branch)} (${topBraWrt36.tot_tigapuluh_wr})
-Expi- ${topRegExt36.region_nama} (${topRegExt36.tot_tigapuluh_ex})-> Dis ${getShortName(topBraExt36.branch)} (${topBraExt36.tot_tigapuluh_ex})
-      `;
+`;
       resolve({
         detail: results,
         summaryText: summaryString,
@@ -217,5 +118,4 @@ Expi- ${topRegExt36.region_nama} (${topRegExt36.tot_tigapuluh_ex})-> Dis ${getSh
   });
 }
 
-// getPerformanceReport();
 module.exports = { getPerformanceReport };

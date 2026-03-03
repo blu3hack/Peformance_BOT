@@ -29,6 +29,8 @@ async function main() {
   await new Promise((r) => setTimeout(r, 5000));
   await runCommand('node', ['alert_ttr_indihome_send'], '\n========= Alert TTR INDIHOME =========', 5000);
   await runCommand('node', ['alert_ttr_indibiz_send'], '\n========= Alert TTR INDIBIZ =========', 5000);
+  await runCommand('node', ['alert_gamas_network_send'], '\n========= Alert Gamas Network =========', 5000);
+  await runCommand('node', ['alert_gamas_access_send'], '\n========= Alert Gamas Access =========', 5000);
 
   console.log('\nEksekusi selesai. Menunggu 3 jam untuk siklus berikutnya...');
 }
