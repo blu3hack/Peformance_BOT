@@ -116,8 +116,7 @@ Expi 24 - ${topEX24Region.region_tsel} (${topEX24Region.ex24}) -> Dis ${getShort
 
 <b>SQM</b>
 HSI - ${topSQMHSIRegion.region_tsel} (${topSQMHSIRegion.hsi}) -> Dis ${getShortName(topBraSQMHSI?.branch)} (${topBraSQMHSI?.hsi || 0})
-HSI - ${topSQMHSIGAULRegion.region_tsel} (${topSQMHSIGAULRegion.hsi_gaul}) -> Dis ${getShortName(topBraSQMHSIGAUL?.branch)} (${topBraSQMHSIGAUL?.hsi_gaul || 0})
-
+Gaul - ${topSQMHSIGAULRegion.region_tsel} (${topSQMHSIGAULRegion.hsi_gaul}) -> Dis ${getShortName(topBraSQMHSIGAUL?.branch)} (${topBraSQMHSIGAUL?.hsi_gaul || 0})
 `;
 
       resolve({
