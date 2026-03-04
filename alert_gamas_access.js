@@ -210,8 +210,6 @@ Open - ${topRegGamas_odp_op.region_tsel || 'N/A'} (${topRegGamas_odp_op.gamas_od
 Warn - ${topRegGamas_odp_wr.region_tsel || 'N/A'} (${topRegGamas_odp_wr.gamas_odp_wr || 0}) -> Dis ${getShortName(topBragamas_odp_wr.branch)} (${topBragamas_odp_wr.gamas_odp_wr || 0})
 Expi - ${topRegGamas_odp_ex.region_tsel || 'N/A'} (${topRegGamas_odp_ex.gamas_odp_ex || 0}) -> Dis ${getShortName(topBragamas_odp_ex.branch)} (${topBragamas_odp_ex.gamas_odp_ex || 0})
 
-
-
 `;
       resolve({
         detail: results,
