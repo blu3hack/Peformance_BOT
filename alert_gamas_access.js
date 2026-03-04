@@ -159,11 +159,58 @@ async function getPerformanceReport() {
       const topRegGamas_olt_ex = getTop(regionTotals, 'gamas_olt_ex');
       const topBragamas_olt_ex = getTop(branchDetails, 'gamas_olt_ex', (b) => b.region_tsel === topRegGamas_olt_ex.region_tsel);
 
+      // ++++++++++++++ FEEDER ++++++++++++++++++++++++++
+      const topRegGamas_feeder_op = getTop(regionTotals, 'gamas_feeder_op');
+      const topBragamas_feeder_op = getTop(branchDetails, 'gamas_feeder_op', (b) => b.region_tsel === topRegGamas_feeder_op.region_tsel);
+
+      const topRegGamas_feeder_wr = getTop(regionTotals, 'gamas_feeder_wr');
+      const topBragamas_feeder_wr = getTop(branchDetails, 'gamas_feeder_wr', (b) => b.region_tsel === topRegGamas_feeder_wr.region_tsel);
+
+      const topRegGamas_feeder_ex = getTop(regionTotals, 'gamas_feeder_ex');
+      const topBragamas_feeder_ex = getTop(branchDetails, 'gamas_feeder_ex', (b) => b.region_tsel === topRegGamas_feeder_ex.region_tsel);
+
+      // ++++++++++++++ DISTRIBUSI ++++++++++++++++++++++++++
+      const topRegGamas_distribusi_op = getTop(regionTotals, 'gamas_distribusi_op');
+      const topBragamas_distribusi_op = getTop(branchDetails, 'gamas_distribusi_op', (b) => b.region_tsel === topRegGamas_distribusi_op.region_tsel);
+
+      const topRegGamas_distribusi_wr = getTop(regionTotals, 'gamas_distribusi_wr');
+      const topBragamas_distribusi_wr = getTop(branchDetails, 'gamas_distribusi_wr', (b) => b.region_tsel === topRegGamas_distribusi_wr.region_tsel);
+
+      const topRegGamas_distribusi_ex = getTop(regionTotals, 'gamas_distribusi_ex');
+      const topBragamas_distribusi_ex = getTop(branchDetails, 'gamas_distribusi_ex', (b) => b.region_tsel === topRegGamas_distribusi_ex.region_tsel);
+
+      // ++++++++++++++ ODP ++++++++++++++++++++++++++
+      const topRegGamas_odp_op = getTop(regionTotals, 'gamas_odp_op');
+      const topBragamas_odp_op = getTop(branchDetails, 'gamas_odp_op', (b) => b.region_tsel === topRegGamas_odp_op.region_tsel);
+
+      const topRegGamas_odp_wr = getTop(regionTotals, 'gamas_odp_wr');
+      const topBragamas_odp_wr = getTop(branchDetails, 'gamas_odp_wr', (b) => b.region_tsel === topRegGamas_odp_wr.region_tsel);
+
+      const topRegGamas_odp_ex = getTop(regionTotals, 'gamas_odp_ex');
+      const topBragamas_odp_ex = getTop(branchDetails, 'gamas_odp_ex', (b) => b.region_tsel === topRegGamas_odp_ex.region_tsel);
+
       // Gunakan Optional Chaining dan Default Value
-      const summaryString = `<b>Gamas OLT</b>
+      const summaryString = `<b>OLT</b>
 Open - ${topRegGamas_olt_op.region_tsel || 'N/A'} (${topRegGamas_olt_op.gamas_olt_op || 0}) -> Dis ${getShortName(topBragamas_olt_op.branch)} (${topBragamas_olt_op.gamas_olt_op || 0})
 Warn - ${topRegGamas_olt_wr.region_tsel || 'N/A'} (${topRegGamas_olt_wr.gamas_olt_wr || 0}) -> Dis ${getShortName(topBragamas_olt_wr.branch)} (${topBragamas_olt_wr.gamas_olt_wr || 0})
 Expi - ${topRegGamas_olt_ex.region_tsel || 'N/A'} (${topRegGamas_olt_ex.gamas_olt_ex || 0}) -> Dis ${getShortName(topBragamas_olt_ex.branch)} (${topBragamas_olt_ex.gamas_olt_ex || 0})
+
+<b>FEEDER</b>
+Open - ${topRegGamas_feeder_op.region_tsel || 'N/A'} (${topRegGamas_feeder_op.gamas_feeder_op || 0}) -> Dis ${getShortName(topBragamas_feeder_op.branch)} (${topBragamas_feeder_op.gamas_feeder_op || 0})
+Warn - ${topRegGamas_feeder_wr.region_tsel || 'N/A'} (${topRegGamas_feeder_wr.gamas_feeder_wr || 0}) -> Dis ${getShortName(topBragamas_feeder_wr.branch)} (${topBragamas_feeder_wr.gamas_feeder_wr || 0})
+Expi - ${topRegGamas_feeder_ex.region_tsel || 'N/A'} (${topRegGamas_feeder_ex.gamas_feeder_ex || 0}) -> Dis ${getShortName(topBragamas_feeder_ex.branch)} (${topBragamas_feeder_ex.gamas_feeder_ex || 0})
+
+<b>DISTRIBUSI</b>
+Open - ${topRegGamas_distribusi_op.region_tsel || 'N/A'} (${topRegGamas_distribusi_op.gamas_distribusi_op || 0}) -> Dis ${getShortName(topBragamas_distribusi_op.branch)} (${topBragamas_distribusi_op.gamas_distribusi_op || 0})
+Warn - ${topRegGamas_distribusi_wr.region_tsel || 'N/A'} (${topRegGamas_distribusi_wr.gamas_distribusi_wr || 0}) -> Dis ${getShortName(topBragamas_distribusi_wr.branch)} (${topBragamas_distribusi_wr.gamas_distribusi_wr || 0})
+Expi - ${topRegGamas_distribusi_ex.region_tsel || 'N/A'} (${topRegGamas_distribusi_ex.gamas_distribusi_ex || 0}) -> Dis ${getShortName(topBragamas_distribusi_ex.branch)} (${topBragamas_distribusi_ex.gamas_distribusi_ex || 0})
+
+<b>ODP</b>
+Open - ${topRegGamas_odp_op.region_tsel || 'N/A'} (${topRegGamas_odp_op.gamas_odp_op || 0}) -> Dis ${getShortName(topBragamas_odp_op.branch)} (${topBragamas_odp_op.gamas_odp_op || 0})
+Warn - ${topRegGamas_odp_wr.region_tsel || 'N/A'} (${topRegGamas_odp_wr.gamas_odp_wr || 0}) -> Dis ${getShortName(topBragamas_odp_wr.branch)} (${topBragamas_odp_wr.gamas_odp_wr || 0})
+Expi - ${topRegGamas_odp_ex.region_tsel || 'N/A'} (${topRegGamas_odp_ex.gamas_odp_ex || 0}) -> Dis ${getShortName(topBragamas_odp_ex.branch)} (${topBragamas_odp_ex.gamas_odp_ex || 0})
+
+
 
 `;
       resolve({
