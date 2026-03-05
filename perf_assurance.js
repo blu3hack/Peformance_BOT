@@ -104,7 +104,7 @@ async function generateCaption() {
 
       // --- PERBAIKAN DI SINI ---
       // Menghapus <br>, menghapus **, dan memastikan tag tertutup
-      message += `<b>==== ${area} ${areaRank} (${avgScoreArea}/10) ====</b>\n`;
+      message += `<b>==== ${area} ====</b>\n`;
       message += areaDetails + '\n';
     }
 
