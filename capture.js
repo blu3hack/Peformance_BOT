@@ -1,11 +1,16 @@
 require('dotenv').config();
 const puppeteer = require('puppeteer');
+const TelegramBot = require('node-telegram-bot-api');
+
+// Inisialisasi Bot Telegram
+const token = process.env.TRIGGER_BOT_TOKEN;
+const bot = new TelegramBot(token);
+const ADMIN_ID = process.env.ALLOWED_CHAT_ID;
 
 (async () => {
   const USER_DATA_PATH = './user_session';
   let browser;
 
-  // Handler agar saat script dimatikan (Ctrl+C), browser ikut tertutup bersih
   const cleanup = async () => {
     if (browser) {
       console.log('\nStopping bot and closing browser...');
@@ -18,83 +23,56 @@ const puppeteer = require('puppeteer');
 
   try {
     browser = await puppeteer.launch({
-      headless: false,
+      headless: 'new',
       userDataDir: USER_DATA_PATH,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-blink-features=AutomationControlled',
-        '--start-maximized',
-        '--no-first-run', // Mencegah munculnya welcome screen chrome
-      ],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-blink-features=AutomationControlled', '--start-maximized'],
       defaultViewport: null,
     });
 
-    // --- PERBAIKAN: Bersihkan tab default yang terbuka otomatis ---
-    const initialPages = await browser.pages();
-    if (initialPages.length > 1) {
-      // Tutup semua tab kecuali yang satu (agar browser tidak mati)
-      for (let i = 1; i < initialPages.length; i++) {
-        await initialPages[i].close();
-      }
-    }
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
 
-    const targets = [
-      { url: 'https://sympony.tif3.net/capture-performance', sel: 'body > div:nth-child(1)', name: 'ASR-ENT.png' },
-      { url: 'https://sympony.tif3.net/capture-performance', sel: 'body > div:nth-child(2)', name: 'ASR-WHF.png' },
-      // { url: 'https://sympony.tif3.net/bot-assurance/indihome', sel: '#captureArea', name: 'alert-indihome.png' },
-      // { url: 'https://sympony.tif3.net/bot-assurance/indibiz', sel: '#captureArea', name: 'alert-indibiz.png' },
-      // { url: 'https://sympony.tif3.net/bot-assurance/network', sel: '#captureArea', name: 'alert-gamas-network.png' },
-      // { url: 'https://sympony.tif3.net/bot-assurance/access', sel: '#captureArea', name: 'alert-gamas-acces.png' },
-    ];
+    const targetUrl = 'https://sympony.tif3.net/capture-performance';
+    console.log(`🌐 Membuka halaman login...`);
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
 
-    for (const target of targets) {
-      let page;
+    // --- PROSES LOGIN ---
+    const loginCheck = await page.$('#username');
+    if (loginCheck) {
+      console.log(`🔑 Menjalankan proses login...`);
       try {
-        page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-        await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 2 });
+        await page.type('#username', process.env.WEB_USERNAME);
+        await page.type('input[type="password"]', process.env.WEB_PASSWORD);
 
-        await page.goto(target.url, { waitUntil: 'networkidle2', timeout: 60000 });
+        await Promise.all([page.click('button[type="submit"]'), page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 })]);
 
-        const loginCheck = await page.$('#username');
-        if (loginCheck) {
-          console.log(`🔑 Sesi habis, login ulang...`);
-          await page.type('#username', process.env.WEB_USERNAME);
-          await page.type('input[type="password"]', process.env.WEB_PASSWORD);
-          await Promise.all([page.click('button[type="submit"]'), page.waitForNavigation({ waitUntil: 'networkidle2' })]);
-          await page.goto(target.url, { waitUntil: 'networkidle2' });
+        // Verifikasi apakah login benar-benar berhasil (cek apakah input username sudah hilang)
+        const stillOnLoginPage = await page.$('#username');
+
+        if (!stillOnLoginPage) {
+          console.log('✅ Login Berhasil!');
+          await bot.sendMessage(ADMIN_ID, `✅ <b>LOGIN SUCCESS</b>\nBot berhasil login ke Sympony pada <code>${new Date().toLocaleString('id-ID')}</code>`, { parse_mode: 'HTML' });
+        } else {
+          throw new Error('Password salah atau akun terblokir.');
         }
-
-        await page.evaluate(() => {
-          localStorage.setItem('theme', 'light');
-          const style = document.createElement('style');
-          style.innerHTML = `* { transition: none !important; animation: none !important; }`;
-          document.head.appendChild(style);
-        });
-
-        await page.waitForSelector(target.sel, { visible: true, timeout: 30000 });
-        await new Promise((r) => setTimeout(r, 2000));
-
-        const element = await page.$(target.sel);
-        if (element) {
-          await element.screenshot({ path: target.name });
-          console.log(`✅ Berhasil capture: ${target.name}`);
-        }
-      } catch (err) {
-        console.error(`❌ Gagal pada ${target.name}: ${err.message}`);
-      } finally {
-        if (page) {
-          await page.close(); // Tutup tab segera setelah selesai
-        }
+      } catch (loginError) {
+        console.error(`❌ Login Gagal: ${loginError.message}`);
+        await bot.sendMessage(ADMIN_ID, `❌ <b>LOGIN FAILED</b>\nError: <code>${loginError.message}</code>`, { parse_mode: 'HTML' });
       }
+    } else {
+      console.log('ℹ️ Sesi masih aktif, tidak perlu login.');
+      await bot.sendMessage(ADMIN_ID, `<b>SESSION ACTIVE</b>\n`, { parse_mode: 'HTML' });
     }
+
+    // --- CAPTURE DIHAPUS SESUAI PERMINTAAN ---
+    console.log('🏁 Proses login selesai, tidak ada capture yang dilakukan.');
   } catch (mainError) {
     console.error('🔴 Fatal Error:', mainError.message);
+    await bot.sendMessage(ADMIN_ID, `🔴 <b>FATAL ERROR</b>\n${mainError.message}`, { parse_mode: 'HTML' });
   } finally {
     if (browser) {
-      console.log('\nAll targets processed. Closing browser...');
       await browser.close();
     }
+    process.exit();
   }
 })();
