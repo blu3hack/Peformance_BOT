@@ -41,16 +41,6 @@ function runCommand(cmd, args = [], label = '', delay = 0) {
     });
 
     child.on('close', async (code) => {
-      const status = code === 0 ? '✅ BERHASIL' : '❌ GAGAL';
-
-      // Kirim Ringkasan dan Log ke Telegram
-      // Jika log terlalu panjang (> 4000 karakter), Telegram akan error, maka kita potong
-      const cleanOutput = outputData.length > 3500 ? outputData.substring(outputData.length - 3500) + '\n...(log dipotong karena terlalu panjang)' : outputData;
-
-      const message = `*LAPORAN TASK*\n` + `━━━━━━━━━━━━━━━\n` + `*Command:* \`${cmd} ${args.join(' ')}\`\n` + `*Status:* ${status}\n` + `*Log Output:*\n\`\`\`\n${cleanOutput || 'Tidak ada output'}\n\`\`\``;
-
-      await bot.sendMessage(MY_CHAT_ID, message, { parse_mode: 'Markdown' });
-
       if (delay > 0) {
         setTimeout(resolve, delay);
       } else {
@@ -76,15 +66,9 @@ const taskCapture = async () => {
   await runCommand('node', ['capture'], '📸 Memulai Proses Capture...', 20000);
 };
 
-const taskTrigger = async () => {
-  console.log(`\n[${new Date().toLocaleString()}] --- Start Trigger ---`);
-  await runCommand('node', ['trigger'], '🚀 Memulai Proses Trigger...');
-};
-
 // Konfigurasi Waktu
 const LIMA_MENIT = 30 * 60 * 1000;
 const TIGA_JAM = 3 * 60 * 60 * 1000;
 
 // Jalankan Siklus
 startCycle('Capture', taskCapture, LIMA_MENIT);
-// startCycle('Trigger', taskTrigger, TIGA_JAM);
